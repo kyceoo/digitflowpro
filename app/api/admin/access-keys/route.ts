@@ -4,7 +4,7 @@ import { query, queryOne } from "@/lib/mysql/db"
 interface AccessKey {
   id: number
   access_key: string
-  device_limit: number
+  device_fingerprint: string | null
   is_active: boolean
   expires_at: string | null
   last_used_at: string | null
@@ -12,6 +12,7 @@ interface AccessKey {
   updated_at: string
 }
 
+// Generate a random access key
 function generateAccessKey(): string {
   const prefix = "DFP"
   const year = new Date().getFullYear()
@@ -20,14 +21,10 @@ function generateAccessKey(): string {
   return `${prefix}-${year}-${random}-${timestamp}`
 }
 
+// GET - Fetch all access keys
 export async function GET() {
   try {
-    const keys = await query<AccessKey & { device_count: number }>(
-      `SELECT ak.*, 
-        (SELECT COUNT(*) FROM access_key_devices WHERE access_key_id = ak.id AND is_active = TRUE) as device_count
-       FROM access_keys ak 
-       ORDER BY ak.created_at DESC`,
-    )
+    const keys = await query<AccessKey>("SELECT * FROM access_keys ORDER BY created_at DESC")
 
     return NextResponse.json({ keys })
   } catch (error) {
@@ -36,17 +33,17 @@ export async function GET() {
   }
 }
 
+// POST - Generate new access key
 export async function POST(request: NextRequest) {
   try {
-    const { expiryMonths = 12, deviceLimit = 100 } = await request.json()
+    const { expiryMonths = 12 } = await request.json()
 
     const accessKey = generateAccessKey()
     const expiresAt = new Date()
     expiresAt.setMonth(expiresAt.getMonth() + expiryMonths)
 
-    await query("INSERT INTO access_keys (access_key, device_limit, is_active, expires_at) VALUES (?, ?, TRUE, ?)", [
+    await query("INSERT INTO access_keys (access_key, is_active, expires_at) VALUES (?, TRUE, ?)", [
       accessKey,
-      deviceLimit,
       expiresAt.toISOString().slice(0, 19).replace("T", " "),
     ])
 
@@ -59,6 +56,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// PATCH - Update access key status
 export async function PATCH(request: NextRequest) {
   try {
     const { id, isActive } = await request.json()
@@ -72,6 +70,7 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
+// DELETE - Remove access key
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
