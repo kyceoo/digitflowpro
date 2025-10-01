@@ -16,9 +16,8 @@ import { analyzeAllMarketsWithProgress } from "@/lib/signal-analysis"
 import { useTickData } from "@/hooks/use-tick-data"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { Activity, LogOut, Key, Settings } from "lucide-react"
+import { Activity, Key, LogOut, Shield } from "lucide-react"
 import type { MarketSignal } from "@/components/signal-analysis-dialog"
-import Link from "next/link"
 
 export default function Home() {
   const router = useRouter()
@@ -37,13 +36,6 @@ export default function Home() {
       setIsAuthenticated(true)
     }
   }, [router])
-
-  const handleLogout = () => {
-    localStorage.removeItem("dfp_session")
-    localStorage.removeItem("dfp_device_id")
-    document.cookie = "dfp_session=; path=/; max-age=0"
-    router.push("/login")
-  }
 
   const {
     tickHistory,
@@ -80,8 +72,21 @@ export default function Home() {
     return results
   }
 
+  const handleLogout = () => {
+    localStorage.removeItem("dfp_session")
+    document.cookie = "dfp_session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
+    router.push("/login")
+  }
+
   if (!isAuthenticated) {
-    return null
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950">
+        <div className="text-center">
+          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent mx-auto" />
+          <p className="text-slate-300">Verifying access...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -94,27 +99,26 @@ export default function Home() {
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">Digit Flow Pro</h1>
-              <p className="text-xs sm:text-sm text-blue-300">Professional Market Analysis</p>
+              <p className="text-xs sm:text-sm text-blue-300">The Original Market Analysis System</p>
             </div>
           </div>
           <div className="flex gap-2">
-            <Link href="/admin">
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-purple-500/50 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 hover:text-purple-200"
-              >
-                <Settings className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Admin</span>
-              </Button>
-            </Link>
+            <Button
+              onClick={() => router.push("/admin")}
+              variant="outline"
+              size="sm"
+              className="border-purple-500/50 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20"
+            >
+              <Shield className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Admin</span>
+            </Button>
             <Button
               onClick={handleLogout}
               variant="outline"
               size="sm"
-              className="border-red-500/50 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:text-red-200"
+              className="border-red-500/50 bg-red-500/10 text-red-300 hover:bg-red-500/20"
             >
-              <LogOut className="h-4 w-4 sm:mr-2" />
+              <LogOut className="h-4 w-4 mr-1" />
               <span className="hidden sm:inline">Logout</span>
             </Button>
           </div>
