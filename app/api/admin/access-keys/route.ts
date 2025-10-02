@@ -1,17 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { query, queryOne } from "@/lib/mysql/db"
+import { createClient } from "@/lib/supabase/server"
 
-interface AccessKey {
-  id: number
-  access_key: string
-  device_limit: number
-  is_active: boolean
-  expires_at: string | null
-  last_used_at: string | null
-  created_at: string
-  updated_at: string
-}
-
+// Generate a random access key
 function generateAccessKey(): string {
   const prefix = "DFP"
   const year = new Date().getFullYear()
@@ -20,14 +10,17 @@ function generateAccessKey(): string {
   return `${prefix}-${year}-${random}-${timestamp}`
 }
 
+// GET - Fetch all access keys
 export async function GET() {
   try {
-    const keys = await query<AccessKey & { device_count: number }>(
-      `SELECT ak.*, 
-        (SELECT COUNT(*) FROM access_key_devices WHERE access_key_id = ak.id AND is_active = TRUE) as device_count
-       FROM access_keys ak 
-       ORDER BY ak.created_at DESC`,
-    )
+    const supabase = await createClient()
+
+    const { data: keys, error } = await supabase
+      .from("access_keys")
+      .select("*")
+      .order("created_at", { ascending: false })
+
+    if (error) throw error
 
     return NextResponse.json({ keys })
   } catch (error) {
@@ -36,21 +29,27 @@ export async function GET() {
   }
 }
 
+// POST - Generate new access key
 export async function POST(request: NextRequest) {
   try {
-    const { expiryMonths = 12, deviceLimit = 100 } = await request.json()
+    const { expiryMonths = 12 } = await request.json()
+    const supabase = await createClient()
 
     const accessKey = generateAccessKey()
     const expiresAt = new Date()
     expiresAt.setMonth(expiresAt.getMonth() + expiryMonths)
 
-    await query("INSERT INTO access_keys (access_key, device_limit, is_active, expires_at) VALUES (?, ?, TRUE, ?)", [
-      accessKey,
-      deviceLimit,
-      expiresAt.toISOString().slice(0, 19).replace("T", " "),
-    ])
+    const { data, error } = await supabase
+      .from("access_keys")
+      .insert({
+        access_key: accessKey,
+        is_active: true,
+        expires_at: expiresAt.toISOString(),
+      })
+      .select()
+      .single()
 
-    const data = await queryOne<AccessKey>("SELECT * FROM access_keys WHERE access_key = ?", [accessKey])
+    if (error) throw error
 
     return NextResponse.json({ accessKey, data })
   } catch (error) {
@@ -59,11 +58,15 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// PATCH - Update access key status
 export async function PATCH(request: NextRequest) {
   try {
     const { id, isActive } = await request.json()
+    const supabase = await createClient()
 
-    await query("UPDATE access_keys SET is_active = ? WHERE id = ?", [isActive, id])
+    const { error } = await supabase.from("access_keys").update({ is_active: isActive }).eq("id", id)
+
+    if (error) throw error
 
     return NextResponse.json({ success: true })
   } catch (error) {
@@ -72,6 +75,7 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
+// DELETE - Remove access key
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -81,7 +85,11 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Access key ID required" }, { status: 400 })
     }
 
-    await query("DELETE FROM access_keys WHERE id = ?", [id])
+    const supabase = await createClient()
+
+    const { error } = await supabase.from("access_keys").delete().eq("id", id)
+
+    if (error) throw error
 
     return NextResponse.json({ success: true })
   } catch (error) {
