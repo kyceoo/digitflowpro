@@ -1,7 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useState } from "react"
 import { MarketSelector } from "@/components/market-selector"
 import { DigitDisplay } from "@/components/digit-display"
 import { PredictionPanel } from "@/components/prediction-panel"
@@ -16,26 +15,15 @@ import { analyzeAllMarketsWithProgress } from "@/lib/signal-analysis"
 import { useTickData } from "@/hooks/use-tick-data"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { Activity, Key, LogOut, Shield } from "lucide-react"
+import { Activity, Key } from "lucide-react"
 import type { MarketSignal } from "@/components/signal-analysis-dialog"
 
 export default function Home() {
-  const router = useRouter()
   const [selectedMarket, setSelectedMarket] = useState("")
   const [maxTicks, setMaxTicks] = useState(100)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [signalDialogOpen, setSignalDialogOpen] = useState(true)
   const [latestSignals, setLatestSignals] = useState<MarketSignal[]>([])
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-
-  useEffect(() => {
-    const session = localStorage.getItem("dfp_session")
-    if (!session) {
-      router.push("/login")
-    } else {
-      setIsAuthenticated(true)
-    }
-  }, [router])
 
   const {
     tickHistory,
@@ -72,55 +60,18 @@ export default function Home() {
     return results
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem("dfp_session")
-    document.cookie = "dfp_session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
-    router.push("/login")
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950">
-        <div className="text-center">
-          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent mx-auto" />
-          <p className="text-slate-300">Verifying access...</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 p-2 sm:p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-center">
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="rounded-lg bg-blue-500/20 p-2">
               <Key className="h-5 w-5 sm:h-6 sm:w-6 text-blue-400" />
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">Digit Flow Pro</h1>
-              <p className="text-xs sm:text-sm text-blue-300">The Original Market Analysis System</p>
+              <p className="text-xs sm:text-sm text-blue-300">Professional Market Analysis</p>
             </div>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={() => router.push("/admin")}
-              variant="outline"
-              size="sm"
-              className="border-purple-500/50 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20"
-            >
-              <Shield className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Admin</span>
-            </Button>
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              size="sm"
-              className="border-red-500/50 bg-red-500/10 text-red-300 hover:bg-red-500/20"
-            >
-              <LogOut className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Logout</span>
-            </Button>
           </div>
         </div>
 
